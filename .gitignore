@@ -1,0 +1,3 @@
+webauthn-rs/
+test-webautn/target/
+my-svelte-project/node_modules
