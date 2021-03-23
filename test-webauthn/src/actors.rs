@@ -6,13 +6,15 @@ use webauthn_rs::proto::{
 };
 use webauthn_rs::{AuthenticationState, RegistrationState, Webauthn};
 
-use async_std::sync::Mutex;
 use lru::LruCache;
 use std::collections::BTreeMap;
+use async_std::sync::Mutex;
 
 type WebauthnResult<T> = core::result::Result<T, WebauthnError>;
 
 const CHALLENGE_CACHE_SIZE: usize = 256;
+
+
 
 pub struct WebauthnActor {
     wan: Webauthn<WebauthnEphemeralConfig>,
@@ -52,7 +54,7 @@ impl WebauthnActor {
             None => None,
         }
         .ok_or(WebauthnError::CredentialRetrievalError)?;
-        let (acr, st) = self.wan.generate_challenge_authenticate(creds, None)?;
+        let (acr, st) = self.wan.generate_challenge_authenticate(creds)?;
         self.auth_chals
             .lock()
             .await
@@ -63,7 +65,7 @@ impl WebauthnActor {
     pub async fn register(
         &mut self,
         username: &String,
-        reg: RegisterPublicKeyCredential,
+        reg: &RegisterPublicKeyCredential,
     ) -> WebauthnResult<()> {
         let username = username.as_bytes().to_vec();
         let rs = self
@@ -99,7 +101,7 @@ impl WebauthnActor {
     pub async fn authenticate(
         &mut self,
         username: &String,
-        lgn: PublicKeyCredential,
+        lgn: &PublicKeyCredential,
     ) -> WebauthnResult<()> {
         let username = username.as_bytes().to_vec();
         let st = self
@@ -112,19 +114,19 @@ impl WebauthnActor {
         let r = self
             .wan
             .authenticate_credential(lgn, st)
-            .unwrap()
             .map(|(cred_id, auth_data)| {
                 let r = match creds.get_mut(&username) {
                     Some(v) => {
                         let mut c = v.remove(&cred_id).unwrap();
-                        c.counter = auth_data;
+                        c.counter = auth_data.counter;
                         v.insert(cred_id.clone(), c);
                         Ok(())
                     }
                     None => Err(WebauthnError::ChallengeNotFound),
                 };
                 r
-            }).expect("WebauthnError::ChallengeNotFound");
+            })
+            .expect("WebauthnError::ChallengeNotFound");
         r
     }
 }
