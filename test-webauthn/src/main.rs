@@ -1,14 +1,18 @@
 extern crate actix_web;
 extern crate base64;
 extern crate serde;
+extern crate webauthn_rs;
+extern crate async_std;
+extern crate lru;
 
 use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use proto::PublicKeyCredential;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::Arc;
 
 mod base64_data;
 mod proto;
+mod actors;
 
 #[derive(Serialize, Deserialize)]
 struct MyObj {
@@ -31,20 +35,19 @@ struct Login {
 
 #[derive(Debug)]
 struct AppState {
-    counter: Mutex<i32>,
+    counter: i32,
 }
 
 async fn login(
     val: web::Json<Login>,
     data: web::Data<AppState>,
 ) -> Result<HttpResponse, std::io::Error> {
-    let mut counter = data.counter.lock().unwrap();
-    *counter += 1;
-    *counter += 1;
-    let output = HttpResponse::Ok().json(MyObj::new(&val.username, *counter));
+    let mut counter = data.counter;
+    counter += 1;
+    let output = HttpResponse::Ok().json(MyObj::new(&val.username, counter));
     Ok(output)
 }
-async fn index(data: web::Data<AppState>) -> String {
+/* async fn index(data: web::Data<AppState>) -> String {
     let mut counter = data.counter.lock().unwrap(); // <- get counter's MutexGuard
     *counter += 1; // <- access counter inside MutexGuard
 
@@ -59,11 +62,11 @@ async fn register(
     dbg!(&info.username);
     let output = HttpResponse::Ok().json(MyObj::new(&info.username, *counter));
     Ok(output)
-}
+} */
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let counter = web::Data::new(AppState {
-        counter: Mutex::new(0),
+        counter: 0,
     });
     HttpServer::new(move || {
         App::new()
