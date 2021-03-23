@@ -63,7 +63,7 @@ impl WebauthnActor {
     pub async fn register(
         &mut self,
         username: &String,
-        reg: &RegisterPublicKeyCredential,
+        reg: RegisterPublicKeyCredential,
     ) -> WebauthnResult<()> {
         let username = username.as_bytes().to_vec();
         let rs = self
@@ -73,5 +73,58 @@ impl WebauthnActor {
             .pop(&username)
             .ok_or(WebauthnError::ChallengeNotFound)?;
         let mut creds = self.creds.lock().await;
+        let r = match creds.get_mut(&username) {
+            Some(ucreds) => self
+                .wan
+                .register_credential(reg, rs, |cred_id| Ok(ucreds.contains_key(cred_id)))
+                .map(|cred| {
+                    let cred_id = cred.cred_id.clone();
+                    ucreds.insert(cred_id, cred);
+                }),
+            None => {
+                let r = self
+                    .wan
+                    .register_credential(reg, rs, |_| Ok(false))
+                    .map(|cred| {
+                        let mut t = BTreeMap::new();
+                        let credential_id = cred.cred_id.clone();
+                        t.insert(credential_id, cred);
+                        creds.insert(username, t);
+                    });
+                r
+            }
+        };
+        r
+    }
+    pub async fn authenticate(
+        &mut self,
+        username: &String,
+        lgn: PublicKeyCredential,
+    ) -> WebauthnResult<()> {
+        let username = username.as_bytes().to_vec();
+        let st = self
+            .auth_chals
+            .lock()
+            .await
+            .pop(&username)
+            .ok_or(WebauthnError::ChallengeNotFound)?;
+        let mut creds = self.creds.lock().await;
+        let r = self
+            .wan
+            .authenticate_credential(lgn, st)
+            .unwrap()
+            .map(|(cred_id, auth_data)| {
+                let r = match creds.get_mut(&username) {
+                    Some(v) => {
+                        let mut c = v.remove(&cred_id).unwrap();
+                        c.counter = auth_data;
+                        v.insert(cred_id.clone(), c);
+                        Ok(())
+                    }
+                    None => Err(WebauthnError::ChallengeNotFound),
+                };
+                r
+            }).expect("WebauthnError::ChallengeNotFound");
+        r
     }
 }

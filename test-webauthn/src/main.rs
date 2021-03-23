@@ -4,6 +4,8 @@ extern crate serde;
 extern crate webauthn_rs;
 extern crate async_std;
 extern crate lru;
+extern crate rustls;
+extern crate openssl;
 
 use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
 use proto::PublicKeyCredential;
@@ -13,6 +15,7 @@ use std::sync::Arc;
 mod base64_data;
 mod proto;
 mod actors;
+mod crypto;
 
 #[derive(Serialize, Deserialize)]
 struct MyObj {
