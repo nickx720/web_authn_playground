@@ -9,10 +9,10 @@ extern crate serde;
 extern crate webauthn_rs;
 
 use actix_session::CookieSession;
-use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{error, web, App,Error,HttpRequest, HttpResponse, HttpServer, Responder};
 use proto::PublicKeyCredential;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{borrow::BorrowMut, sync::{Arc,Mutex}};
 use webauthn_rs::ephemeral::WebauthnEphemeralConfig;
 
 mod actors;
@@ -40,10 +40,6 @@ struct Login {
     username: String,
 }
 
-#[derive(Debug)]
-struct AppState {
-    counter: i32,
-}
 
 struct CmdOptions {
     prefix: String,
@@ -71,12 +67,18 @@ impl CmdOptions {
 }
 
 async fn login(
-    val: web::Json<Login>,
+    state:web::Data<WebauthnActor>,
+    val: web::Path<Login>,
+) -> Result<HttpResponse, Error> {
+    
+    let actor_res = state.challenge_register(val.username.clone()).await;
    
-) -> Result<HttpResponse, std::io::Error> {
-   
-    let output = HttpResponse::Ok().json(MyObj::new(&val.username, 0));
-    Ok(output)
+    let res = match actor_res{
+Ok(chal) =>HttpResponse::Ok().json(&chal),
+        Err(e)=> HttpResponse::InternalServerError().body(format!("{}",e)),
+    };
+   /*  let output = HttpResponse::Ok().json(MyObj::new(&val.username, 0)); */
+    Ok(res)
 }
 
 #[actix_web::main]
@@ -108,7 +110,7 @@ async fn main() -> std::io::Result<()> {
                     .secure(true),
             )
             .app_data(app_state.clone())
-            .route("/", web::post().to(login))
+            .route("/auth/challenge/register/{username}", web::post().to(login))
             .route("/spider", web::post().to(login))
     })
     .bind("127.0.0.1:5000")?

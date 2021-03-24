@@ -34,7 +34,7 @@ impl WebauthnActor {
     }
 
     pub async fn challenge_register(
-        &mut self,
+        &self,
         username: String,
     ) -> WebauthnResult<CreationChallengeResponse> {
         dbg!(&username);
@@ -130,3 +130,4 @@ impl WebauthnActor {
         r
     }
 }
+
