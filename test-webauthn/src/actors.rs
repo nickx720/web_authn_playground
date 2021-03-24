@@ -63,7 +63,7 @@ impl WebauthnActor {
     }
 
     pub async fn register(
-        &mut self,
+        &self,
         username: &String,
         reg: &RegisterPublicKeyCredential,
     ) -> WebauthnResult<()> {

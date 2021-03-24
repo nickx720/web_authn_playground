@@ -1,3 +1,4 @@
+extern crate actix_cors;
 extern crate actix_session;
 extern crate actix_web;
 extern crate async_std;
@@ -8,12 +9,17 @@ extern crate rustls;
 extern crate serde;
 extern crate webauthn_rs;
 
+use actix_cors::Cors;
 use actix_session::CookieSession;
-use actix_web::{error, web, App,Error,HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{error, http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use proto::PublicKeyCredential;
 use serde::{Deserialize, Serialize};
-use std::{borrow::BorrowMut, sync::{Arc,Mutex}};
+use std::{
+    borrow::BorrowMut,
+    sync::{Arc, Mutex},
+};
 use webauthn_rs::ephemeral::WebauthnEphemeralConfig;
+use webauthn_rs::proto::RegisterPublicKeyCredential;
 
 mod actors;
 mod base64_data;
@@ -40,7 +46,6 @@ struct Login {
     username: String,
 }
 
-
 struct CmdOptions {
     prefix: String,
     rp_name: String,
@@ -66,18 +71,29 @@ impl CmdOptions {
     }
 }
 
-async fn login(
-    state:web::Data<WebauthnActor>,
+async fn challenge_register(
+    state: web::Data<WebauthnActor>,
     val: web::Path<Login>,
 ) -> Result<HttpResponse, Error> {
-    
     let actor_res = state.challenge_register(val.username.clone()).await;
-   
-    let res = match actor_res{
-Ok(chal) =>HttpResponse::Ok().json(&chal),
-        Err(e)=> HttpResponse::InternalServerError().body(format!("{}",e)),
+
+    let res = match actor_res {
+        Ok(chal) => HttpResponse::Ok().json(&chal),
+        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
     };
-   /*  let output = HttpResponse::Ok().json(MyObj::new(&val.username, 0)); */
+    Ok(res)
+}
+
+async fn register(
+    state: web::Data<WebauthnActor>,
+    val: web::Path<Login>,
+    body: web::Json<RegisterPublicKeyCredential>,
+) -> Result<HttpResponse, Error> {
+    let actor_res = state.register(&val.username, &body).await;
+    let res = match actor_res {
+        Ok(()) => HttpResponse::Ok().body("body"),
+        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
+    };
     Ok(res)
 }
 
@@ -100,20 +116,24 @@ async fn main() -> std::io::Result<()> {
     );
     let wan = WebauthnActor::new(wan_c);
     let app_state = web::Data::new(wan);
-
     HttpServer::new(move || {
+        let cors = Cors::permissive();
         App::new()
+            .app_data(app_state.clone())
             .wrap(
                 CookieSession::signed(&[0; 32])
                     .domain(prefix.as_str())
                     .name("webauthnrs")
                     .secure(true),
             )
-            .app_data(app_state.clone())
-            .route("/auth/challenge/register/{username}", web::post().to(login))
-            .route("/spider", web::post().to(login))
+            .wrap(cors)
+            .route(
+                "/auth/challenge/register/{username}",
+                web::post().to(challenge_register),
+            )
+            .route("/auth/register/{username}", web::post().to(register))
     })
-    .bind("127.0.0.1:5000")?
+    .bind("127.0.0.1:8000")?
     .run()
     .await
 }
