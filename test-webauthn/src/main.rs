@@ -101,6 +101,31 @@ async fn register(
     Ok(res)
 }
 
+async fn challenge_login(
+    state: web::Data<WebauthnActor>,
+    val: web::Path<Login>,
+) -> Result<HttpResponse, Error> {
+    dbg!("Hello from challenge");
+    let actor_res = state.challenge_authenticate(&val.username).await;
+    let res = match actor_res {
+        Ok(chal) => HttpResponse::Ok().json(&chal),
+        Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
+    };
+    Ok(res)
+}
+
+async fn login(
+    state: web::Data<WebauthnActor>,
+    val: web::Path<Login>,
+    body: web::Json<PublicKeyCredential>,
+) -> Result<HttpResponse, Error> {
+    let res = match state.authenticate(&val.username, &body).await {
+        Ok(()) => HttpResponse::Ok().json("Success"),
+        Err(err) => HttpResponse::NotFound().body(format!("{}", err)),
+    };
+    Ok(res)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
@@ -136,7 +161,12 @@ async fn main() -> std::io::Result<()> {
                 "/auth/challenge/register/{username}",
                 web::post().to(challenge_register),
             )
+            .route(
+                "/auth/challenge/login/{username}",
+                web::post().to(challenge_login),
+            )
             .route("/auth/register/{username}", web::post().to(register))
+            .route("/auth/login/{username}", web::post().to(login))
             .service(Files::new("/build", "public/build").show_files_listing())
             .service(Files::new("/", "./public/").index_file("index.html"))
     })

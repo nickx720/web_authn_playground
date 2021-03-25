@@ -46,7 +46,7 @@ impl WebauthnActor {
         Ok(ccr)
     }
     pub async fn challenge_authenticate(
-        &mut self,
+        &self,
         username: &String,
     ) -> WebauthnResult<RequestChallengeResponse> {
         let creds = match self.creds.lock().await.get(&username.as_bytes().to_vec()) {
@@ -100,7 +100,7 @@ impl WebauthnActor {
         r
     }
     pub async fn authenticate(
-        &mut self,
+        &self,
         username: &String,
         lgn: &PublicKeyCredential,
     ) -> WebauthnResult<()> {
