@@ -1,12 +1,14 @@
 <script lang="ts">
+  import Login from "./components/Login.svelte";
   import Register from "./components/Register.svelte";
   export let name: string;
-  name = "Web authentication"
+  name = "Web authentication";
 </script>
 
 <main>
   <h1>Hello {name}!</h1>
   <Register />
+  <Login />
 </main>
 
 <style>
