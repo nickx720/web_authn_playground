@@ -4,17 +4,21 @@ extern crate actix_session;
 extern crate actix_web;
 extern crate async_std;
 extern crate base64;
+extern crate env_logger;
 extern crate lru;
 extern crate openssl;
 extern crate rustls;
 extern crate serde;
 extern crate webauthn_rs;
-extern crate env_logger;
 
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_session::CookieSession;
-use actix_web::{error, http, web, App,middleware::Logger, Error, HttpRequest, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    error, http, middleware::Logger, web, App, Error, HttpRequest, HttpResponse, HttpServer,
+    Responder,
+};
+use env_logger::Env;
 use serde::{Deserialize, Serialize};
 use std::{
     borrow::BorrowMut,
@@ -22,7 +26,6 @@ use std::{
 };
 use webauthn_rs::ephemeral::WebauthnEphemeralConfig;
 use webauthn_rs::proto::{PublicKeyCredential, RegisterPublicKeyCredential};
-use env_logger::Env;
 
 mod actors;
 mod crypto;
@@ -92,7 +95,7 @@ async fn register(
 ) -> Result<HttpResponse, Error> {
     let actor_res = state.register(&val.username, &body).await;
     let res = match actor_res {
-        Ok(()) => HttpResponse::Ok().body("body"),
+        Ok(()) => HttpResponse::Ok().json("body"),
         Err(e) => HttpResponse::InternalServerError().body(format!("{}", e)),
     };
     Ok(res)
@@ -102,7 +105,7 @@ async fn register(
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let cmd_opt = CmdOptions::new(
-        String::from("/auth"),
+        String::from("/"),
         String::from("localhost"),
         String::from("http://localhost:8080"),
         String::from("localhost"),
@@ -124,18 +127,18 @@ async fn main() -> std::io::Result<()> {
             .app_data(app_state.clone())
             .wrap(
                 CookieSession::signed(&[0; 32])
-                    .domain(prefix.as_str())
+                    .domain(domain.as_str())
+                    .path(prefix.as_str())
                     .name("webauthnrs")
                     .secure(true),
             )
-            .wrap(cors)
             .route(
                 "/auth/challenge/register/{username}",
                 web::post().to(challenge_register),
             )
             .route("/auth/register/{username}", web::post().to(register))
             .service(Files::new("/build", "public/build").show_files_listing())
-            .service(Files::new("/auth", "./public/").index_file("index.html"))
+            .service(Files::new("/", "./public/").index_file("index.html"))
     })
     .bind("127.0.0.1:8080")?
     .run()
