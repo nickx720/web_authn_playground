@@ -25,6 +25,7 @@
     "@tsconfig/svelte": "^1.0.0"
   },
   "dependencies": {
+    "js-base64": "^3.6.0",
     "sirv-cli": "^1.0.0"
   }
 }

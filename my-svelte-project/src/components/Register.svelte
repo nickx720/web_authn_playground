@@ -1,26 +1,74 @@
 <script language="ts">
+  import { Base64 } from "js-base64";
   import Input from "./Input.svelte";
   export let onSubmit;
   export let fields;
   let value = "";
-  const handleSubmit = (event) => {
-    const data = new FormData(event.target);
-    for (const [name, value] of data) {
-      console.log(name, value);
+  /* const publicKeyCredentialToJSON = (pubKeyCred) => {
+    if (pubKeyCred instanceof Array) {
+      let arr = [];
+      for (let i of pubKeyCred) arr.push(publicKeyCredentialToJSON(i));
+
+      return arr;
     }
-    fetch("https://jsonplaceholder.typicode.com/posts", {
+
+    if (pubKeyCred instanceof ArrayBuffer) {
+      return encode(pubKeyCred as any);
+    }
+
+    if (pubKeyCred instanceof Object) {
+      let obj = {};
+
+      for (let key in pubKeyCred) {
+        obj[key] = publicKeyCredentialToJSON(pubKeyCred[key]);
+      }
+
+      return obj;
+    }
+
+    return pubKeyCred;
+  }; */
+  const secondStage = async (newCredentialsInfo) => {
+    let { rawId, response: responseCred, id, type } = newCredentialsInfo;
+    rawId = Base64.fromUint8Array(new Uint8Array(rawId), true);
+    console.log(rawId);
+    let { attestationObject, clientDataJSON } = responseCred;
+    attestationObject = Base64.fromUint8Array(
+      new Uint8Array(attestationObject),
+      true
+    );
+    clientDataJSON = Base64.fromUint8Array(
+      new Uint8Array(clientDataJSON),
+      true
+    );
+    console.log(attestationObject, clientDataJSON);
+    responseCred = { attestationObject, clientDataJSON };
+    const confirmedResponse = await fetch(`/auth/register/${value}`, {
       method: "POST",
-      body: JSON.stringify({
-        title: "foo",
-        body: "bar",
-        userId: 1,
-      }),
       headers: {
-        "Content-type": "application/json; charset=UTF-8",
+        "Content-Type": "application/json",
       },
-    })
-      .then((response) => response.json())
-      .then((json) => (value = json.title));
+      body: JSON.stringify({ id, rawId, response: responseCred, type }),
+    });
+
+    const responseConfirmed = await confirmedResponse.json();
+    console.log(responseConfirmed);
+  };
+  const handleSubmit = async (event) => {
+    const response = await fetch(`/auth/challenge/register/${value}`, {
+      method: "POST",
+    });
+
+    const publicKey = await response.json();
+    console.log(publicKey);
+    let { challenge, user } = publicKey.publicKey;
+    challenge = Base64.toUint8Array(challenge);
+    user.id = Base64.toUint8Array(user.id, true);
+    const newCredentialsInfo = await navigator.credentials.create({
+      publicKey: { ...publicKey.publicKey, challenge, user },
+    });
+    console.log("success", newCredentialsInfo);
+    await secondStage(newCredentialsInfo);
   };
 </script>
 
