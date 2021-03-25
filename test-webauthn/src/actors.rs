@@ -96,6 +96,7 @@ impl WebauthnActor {
                 r
             }
         };
+        dbg!("{}",&r);
         r
     }
     pub async fn authenticate(

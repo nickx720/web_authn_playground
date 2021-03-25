@@ -1,4 +1,5 @@
 extern crate actix_cors;
+extern crate actix_files;
 extern crate actix_session;
 extern crate actix_web;
 extern crate async_std;
@@ -8,23 +9,23 @@ extern crate openssl;
 extern crate rustls;
 extern crate serde;
 extern crate webauthn_rs;
+extern crate env_logger;
 
 use actix_cors::Cors;
+use actix_files::Files;
 use actix_session::CookieSession;
-use actix_web::{error, http, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
-use proto::PublicKeyCredential;
+use actix_web::{error, http, web, App,middleware::Logger, Error, HttpRequest, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
 use std::{
     borrow::BorrowMut,
     sync::{Arc, Mutex},
 };
 use webauthn_rs::ephemeral::WebauthnEphemeralConfig;
-use webauthn_rs::proto::RegisterPublicKeyCredential;
+use webauthn_rs::proto::{PublicKeyCredential, RegisterPublicKeyCredential};
+use env_logger::Env;
 
 mod actors;
-mod base64_data;
 mod crypto;
-mod proto;
 
 use actors::WebauthnActor;
 #[derive(Serialize, Deserialize)]
@@ -99,6 +100,7 @@ async fn register(
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let cmd_opt = CmdOptions::new(
         String::from("/auth"),
         String::from("localhost"),
@@ -132,8 +134,10 @@ async fn main() -> std::io::Result<()> {
                 web::post().to(challenge_register),
             )
             .route("/auth/register/{username}", web::post().to(register))
+            .service(Files::new("/build", "public/build").show_files_listing())
+            .service(Files::new("/auth", "./public/").index_file("index.html"))
     })
-    .bind("127.0.0.1:8000")?
+    .bind("127.0.0.1:8080")?
     .run()
     .await
 }
