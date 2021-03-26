@@ -7,6 +7,6 @@ WORKDIR /source
 EXPOSE 8080
 RUN rustc -V
 
-RUN cargo build --release
+RUN cargo build
 
 CMD cargo run
