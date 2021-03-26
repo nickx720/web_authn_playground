@@ -1,7 +1,8 @@
 FROM rust:1.50
 
 
-ADD ./test-webauthn ./source
+COPY ./test-webauthn/src ./source
+COPY ./test-webauthn/public ./source
 WORKDIR /source
 
 EXPOSE 8080
