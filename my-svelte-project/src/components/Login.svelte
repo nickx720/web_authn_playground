@@ -4,30 +4,6 @@
   export let onSubmit;
   export let fields;
   let value = "";
-  /* const publicKeyCredentialToJSON = (pubKeyCred) => {
-    if (pubKeyCred instanceof Array) {
-      let arr = [];
-      for (let i of pubKeyCred) arr.push(publicKeyCredentialToJSON(i));
-
-      return arr;
-    }
-
-    if (pubKeyCred instanceof ArrayBuffer) {
-      return encode(pubKeyCred as any);
-    }
-
-    if (pubKeyCred instanceof Object) {
-      let obj = {};
-
-      for (let key in pubKeyCred) {
-        obj[key] = publicKeyCredentialToJSON(pubKeyCred[key]);
-      }
-
-      return obj;
-    }
-
-    return pubKeyCred;
-  }; */
   const secondStage = async (newCredentialsInfo) => {
     let { rawId, response: responseCred, id, type } = newCredentialsInfo;
     rawId = Base64.fromUint8Array(new Uint8Array(rawId), true);
