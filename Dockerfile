@@ -3,6 +3,7 @@ FROM rust:1.50
 
 COPY ./test-webauthn/src ./source
 COPY ./test-webauthn/public ./source
+COPY ./test-webauthn/Cargo.toml ./source
 WORKDIR /source
 
 EXPOSE 8080
