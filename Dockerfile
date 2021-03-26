@@ -1,40 +1,16 @@
-FROM rust:1.50 as builder
+# rust tooling is provided by `archlinux-rust`
+FROM geal/archlinux-rust
+MAINTAINER Geoffroy Couprie, contact@geoffroycouprie.com
 
-RUN USER=root cargo new --bin test-webauthn
-WORKDIR ./test-webauthn
-COPY ./test-webauthn/Cargo.toml ./Cargo.toml
-COPY ./test-webauthn/Cargo.lock ./Cargo.lock
-RUN cargo build --release
-RUN rm src/*.rs
+# needed by rust
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
 
-ADD . ./
-
-RUN rm ./target/release/deps/test_webauthn*
-RUN cargo build --release
-
-
-FROM debian:buster-slim
-ARG APP=/usr/src/app
-
-RUN apt-get update \
-    && apt-get install -y ca-certificates tzdata \
-    && rm -rf /var/lib/apt/lists/*
+ADD ./test-webauthn ./source
+WORKDIR ./source
 
 EXPOSE 8080
+RUN rustc -V
 
-ENV TZ=Etc/UTC \
-    APP_USER=appuser
+RUN cargo build --release
 
-RUN groupadd $APP_USER \
-    && useradd -g $APP_USER $APP_USER \
-    && mkdir -p ${APP}
-
-COPY --from=builder /test-webauthn/target/release/test-webauthn ${APP}/test-webauthn
-COPY ./test-webauthn/public ${APP}/public
-
-RUN chown -R $APP_USER:$APP_USER ${APP}
-
-USER $APP_USER
-WORKDIR ${APP}
-
-CMD ["./test-webauthn"]
+CMD cargo run
