@@ -170,7 +170,7 @@ async fn main() -> std::io::Result<()> {
             .service(Files::new("/build", "public/build").show_files_listing())
             .service(Files::new("/", "./public/").index_file("index.html"))
     })
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .run()
     .await
 }
