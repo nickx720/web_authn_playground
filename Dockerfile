@@ -1,4 +1,5 @@
-FROM rust:1.50
+FROM geal/archlinux-rust
+MAINTAINER Geoffroy Couprie, contact@geoffroycouprie.com
 
 
 COPY ./test-webauthn/src ./source/src
