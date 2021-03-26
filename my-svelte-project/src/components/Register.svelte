@@ -1,35 +1,46 @@
 <script language="ts">
   import { Base64 } from "js-base64";
   import Input from "./Input.svelte";
-  export let onSubmit;
-  export let fields;
+  import { createEventDispatcher } from "svelte";
+  const dispatch = createEventDispatcher();
   let value = "";
- 
-  const secondStage = async (newCredentialsInfo) => {
-    let { rawId, response: responseCred, id, type } = newCredentialsInfo;
-    rawId = Base64.fromUint8Array(new Uint8Array(rawId), true);
-    console.log(rawId);
-    let { attestationObject, clientDataJSON } = responseCred;
-    attestationObject = Base64.fromUint8Array(
-      new Uint8Array(attestationObject),
-      true
-    );
-    clientDataJSON = Base64.fromUint8Array(
-      new Uint8Array(clientDataJSON),
-      true
-    );
-    console.log(attestationObject, clientDataJSON);
-    responseCred = { attestationObject, clientDataJSON };
-    const confirmedResponse = await fetch(`/auth/register/${value}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id, rawId, response: responseCred, type }),
-    });
 
-    const responseConfirmed = await confirmedResponse.json();
-    console.log(responseConfirmed);
+  const secondStage = async (newCredentialsInfo) => {
+    try {
+      let { rawId, response: responseCred, id, type } = newCredentialsInfo;
+      rawId = Base64.fromUint8Array(new Uint8Array(rawId), true);
+      console.log(rawId);
+      let { attestationObject, clientDataJSON } = responseCred;
+      attestationObject = Base64.fromUint8Array(
+        new Uint8Array(attestationObject),
+        true
+      );
+      clientDataJSON = Base64.fromUint8Array(
+        new Uint8Array(clientDataJSON),
+        true
+      );
+      console.log(attestationObject, clientDataJSON);
+      responseCred = { attestationObject, clientDataJSON };
+      const confirmedResponse = await fetch(`/auth/register/${value}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, rawId, response: responseCred, type }),
+      });
+
+      const responseConfirmed = await confirmedResponse.json();
+      console.log(responseConfirmed);
+      dispatch("message", {
+        title: "Registered",
+        description: `Congrats ${value}, you have been registered`,
+      });
+    } catch (e) {
+      dispatch("message", {
+        title: "Not Registered",
+        description: `Sorry Something went horribly wrong`,
+      });
+    }
   };
   const handleSubmit = async (event) => {
     const response = await fetch(`/auth/challenge/register/${value}`, {

@@ -1,34 +1,56 @@
 <script language="ts">
   import { Base64 } from "js-base64";
   import Input from "./Input.svelte";
-  export let onSubmit;
-  export let fields;
+  import { createEventDispatcher } from "svelte";
+  const dispatch = createEventDispatcher();
   let value = "";
   const secondStage = async (newCredentialsInfo) => {
-    let { rawId, response: responseCred, id, type } = newCredentialsInfo;
-    rawId = Base64.fromUint8Array(new Uint8Array(rawId), true);
-    console.log(rawId);
-    let {
-      authenticatorData,
-      clientDataJSON,
-      signature,
-      userHandle,
-    } = responseCred;
-    authenticatorData = Base64.fromUint8Array(new Uint8Array(authenticatorData), true);
-    clientDataJSON = Base64.fromUint8Array(new Uint8Array(clientDataJSON), true);
-    signature = Base64.fromUint8Array(new Uint8Array(signature), true);
-    userHandle = Base64.fromUint8Array(new Uint8Array(userHandle), true);
-    responseCred = { authenticatorData, clientDataJSON, signature, userHandle };
-    const confirmedResponse = await fetch(`/auth/login/${value}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id, rawId, response: responseCred, type }),
-    });
+    try {
+      let { rawId, response: responseCred, id, type } = newCredentialsInfo;
+      rawId = Base64.fromUint8Array(new Uint8Array(rawId), true);
+      console.log(rawId);
+      let {
+        authenticatorData,
+        clientDataJSON,
+        signature,
+        userHandle,
+      } = responseCred;
+      authenticatorData = Base64.fromUint8Array(
+        new Uint8Array(authenticatorData),
+        true
+      );
+      clientDataJSON = Base64.fromUint8Array(
+        new Uint8Array(clientDataJSON),
+        true
+      );
+      signature = Base64.fromUint8Array(new Uint8Array(signature), true);
+      userHandle = Base64.fromUint8Array(new Uint8Array(userHandle), true);
+      responseCred = {
+        authenticatorData,
+        clientDataJSON,
+        signature,
+        userHandle,
+      };
+      const confirmedResponse = await fetch(`/auth/login/${value}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, rawId, response: responseCred, type }),
+      });
 
-    const responseConfirmed = await confirmedResponse.json();
-    console.log(responseConfirmed);
+      const responseConfirmed = await confirmedResponse.json();
+      console.log(responseConfirmed);
+      dispatch("message", {
+        title: "Logged in",
+        description: `Congrats ${value}, you have been logged in, welcome to passwordless future !`,
+      });
+    } catch (e) {
+      dispatch("message", {
+        title: "Something went wrong",
+        description: `Oops I did it again`,
+      });
+    }
   };
   const handleSubmit = async (event) => {
     const response = await fetch(`/auth/challenge/login/${value}`, {
