@@ -131,10 +131,10 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let cmd_opt = CmdOptions::new(
         String::from("/"),
-        String::from("localhost"),
-        String::from("http://localhost:8080"),
-        String::from("localhost"),
-        String::from("localhost:8080"),
+        String::from("app-73b3686f-584b-49dd-966f-b38af14429d1"),
+        String::from("https://app-73b3686f-584b-49dd-966f-b38af14429d1.cleverapps.io"),
+        String::from("app-73b3686f-584b-49dd-966f-b38af14429d1"),
+        String::from("app-73b3686f-584b-49dd-966f-b38af14429d1:80"),
     );
     let prefix = cmd_opt.prefix.clone();
     let domain = cmd_opt.rp_id.clone();
