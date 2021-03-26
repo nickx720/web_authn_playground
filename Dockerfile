@@ -1,7 +1,4 @@
-# rust tooling is provided by `archlinux-rust`
-FROM geal/archlinux-rust
-MAINTAINER Geoffroy Couprie, contact@geoffroycouprie.com
-
+FROM rust:1.50
 
 
 ADD ./test-webauthn ./source
