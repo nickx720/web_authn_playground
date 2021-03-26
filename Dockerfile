@@ -1,8 +1,4 @@
-FROM geal/archlinux-rust
-MAINTAINER Geoffroy Couprie, contact@geoffroycouprie.com
-
-# needed by rust
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+FROM rust:1.50
 
 
 COPY ./test-webauthn/src ./source
